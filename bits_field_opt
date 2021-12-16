@@ -1,0 +1,54 @@
+
+# extract a bit field from a 32bits word
+function bits_field_extract()
+{
+    val=$1 # assume that the value should be a hex string
+    m=$2   # m is the offset of most significant bit
+    l=$3   # l is the offset of lest significant bit
+
+    # the hex string should start with "0x"
+    if [ "${val:0:2}" != "0x" ];then
+        return 1
+    fi
+
+    if [ "$l" -gt "$m" ]; then
+        return 1
+    fi
+
+    # we are using bc command to deal with the val
+    # for a hex value, it should be converted to capital word
+    val=$(echo ${val:2} | tr '[a-f]' '[A-F]')
+
+    # convert the value to binary string
+    binary_val=$(echo "ibase=16;obase=2;$val" | bc)
+    #echo the binary is $binary_val
+
+    # calculte the start offset from left
+    len_binary_val=${#binary_val}
+
+    # if the offset of lest significant bit is bigger than
+    # the lengh of binary value, then, the result is 0
+    if [ "$l" -ge "$len_binary_val" ]; then
+        echo 0
+        return 0
+    # else if the offset of most significant bit is bigger
+    # than the lengh of binary value, then we should set
+    # the extract start offset to the bigin of the string
+    # which is 0, the bit field lengh should be
+    # (len_binary_val-l)
+    elif [ "$m" -ge "$len_binary_val" ]; then
+        off=0
+        len=$((len_binary_val-l))
+        #echo get bits from $off, len $len
+    # else, the bit field is in the binary string,
+    # the start offset should be (len_binary_val - m - 1)
+    # the bit field len should be (m - l + 1)
+    else
+        off=$((len_binary_val-m-1))
+        len=$((m-l+1))
+        #echo get bits from $off, len $len
+    fi
+
+    echo $(echo "ibase=2;${binary_val:$off:$len}" | bc)
+    return 0
+}
