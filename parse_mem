@@ -1,0 +1,100 @@
+
+source ./bits_field_opt
+
+# Most of the time we need to parse a memory buffer accoding
+# to a specific format, How to parse a memory buffer efficiently?
+# Rather than find the field one by one, I think a more
+# efficent way is to know the whole format at the beginning
+function parse_mem_for_bit_fields()
+{
+    # the first param is a file contains pure memory data in
+    # hex string, each line 4 words as following:
+    # 0x00000001 0x00000002 0x00000003 0x00000004
+    # 0x00000005 0x00000006 0x00000007 0x00000008
+    input_file_mem=$1
+    # The second param is a file contains field information
+    # The field infomation is defined as following
+    # FIELD_NAME WORD BIT_END BIT_START
+    input_file_format=$2
+
+    local widx=0
+    local field=0
+    local max_line_field=`cat $input_file_format | wc -l`
+    local max_line_mem=`cat $input_file_mem | wc -l`
+    local output=
+    local field=
+
+    curr_mem_line_idx=1 # line index is counted from 1
+    curr_mem_line=(`sed -n ${curr_mem_line_idx}p $input_file_mem`)
+    curr_word_idx=0 # word index is counted from 0
+    curr_word=${curr_mem_line[$((curr_word_idx % 4))]}
+
+    for field in `cat $input_file_format`
+    do
+        # field_name=`echo $field | awk '{print $1}'`
+        # field_word_idx=`echo $field | awk '{print $3}'`
+        # bit_end=`echo $field | awk '{print $4}'`
+        # bit_start=`echo $field | awk '{print $5}'`
+        a=($field)
+        field_name=${a[0]}
+        field_word_idx=${a[1]}
+        bit_end=${a[2]}
+        bit_start=${a[3]}
+
+        if [ "$field_word_idx" -ne "$curr_word_idx" ]; then
+            # print last word's parsing result
+            echo $output
+            output=
+            # Need to udpate curr_word and its index
+            curr_word_idx=$field_word_idx
+            if [ "$((curr_word_idx / 4 + 1))" -ne "$curr_mem_line_idx" ]; then
+                curr_mem_line_idx=$((curr_word_idx / 4 + 1))
+                curr_mem_line=(`sed -n ${curr_mem_line_idx}p $input_file_mem`)
+            fi
+            curr_word=${curr_mem_line[$((curr_word_idx % 4))]}
+        fi
+        field_val=bits_field_extract $curr_word $bit_end $bit_start
+        output=$output" ${field_name}=$field_val"
+    done
+    echo $output
+}
+
+# Statistcis (counters) memory buffer is composed of 64 bits
+# value, every two words is a counter, and the the words are
+# in little endian word order
+function parse_mem_for_64_bits_counters()
+{
+    # the first param is a file contains pure memory data in
+    # hex string, each line 4 words as following:
+    # 0x00000001 0x00000002 0x00000003 0x00000004
+    # 0x00000005 0x00000006 0x00000007 0x00000008
+    input_file_mem=$1
+    # The second file contains counter information
+    # Each line is a counter
+    input_file_cnt=$2
+
+    cntr_idx=0
+
+    for cntr in `cat $input_file_cnt`
+    do
+        if [ "$((cntr_idx % 2))" -eq "0" ]; then
+            curr_mem_line=(`sed -n $((cntr_idx / 2 + 1))p $input_file_mem`)
+            lower_val=${curr_mem_line[0]}
+            lower_val=$(echo ${lower_val:2} | tr '[a-f]' '[A-F]')
+            lower_val=$(echo "ibase=16;$lower_val" | bc)
+            upper_val=${curr_mem_line[1]}
+            upper_val=$(echo ${upper_val:2} | tr '[a-f]' '[A-F]')
+            upper_val=$(echo "ibase=16;$upper_val" | bc)
+        else
+            lower_val=${curr_mem_line[2]}
+            lower_val=$(echo ${lower_val:2} | tr '[a-f]' '[A-F]')
+            lower_val=$(echo "ibase=16;$lower_val" | bc)
+            upper_val=${curr_mem_line[3]}
+            upper_val=$(echo ${upper_val:2} | tr '[a-f]' '[A-F]')
+            upper_val=$(echo "ibase=16;$upper_val" | bc)
+        fi
+        val=$((upper_val*4294967296 + lower_val))
+        echo $cntr: ${val:-0}
+        cntr_idx=$((cntr_idx + 1))
+    done
+}
