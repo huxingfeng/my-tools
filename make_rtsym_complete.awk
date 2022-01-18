@@ -13,10 +13,10 @@
     # Deal with this line
     print $2,$3,$4,$5;
 
-    # save the last line
+    # update last line with current line
     last_line_addr = this_line_addr;
     last[0] = $2;
-    last[1] = $2;
+    last[1] = $3;
     last[2] = $4;
     last[3] = $5;
 }
