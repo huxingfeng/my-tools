@@ -1,0 +1,51 @@
+#! /bin/bash
+
+source parse_mem
+
+function usage()
+{
+    cat <<EOF
+function parse_mac_stats():
+    used to parse i34.me10__mac_stats rtsym
+    params:
+        -n, --nfp   the device number of nfp
+        -p, --port  the port number, valid number should be 0 or 1
+EOF
+}
+
+# parse_mac_stats is used to parse i34.me10__mac_stats rtsym
+# params:
+#    -n, --nfp   the device number of nfp
+#    -p, --port  the port number, valid number should be 0 or 1
+function parse_mac_stats()
+{
+    dev=0
+    port=0
+
+    while [ $# != 0 ]
+    do
+        case $1 in
+            "-p" | "--port")
+            port=$2
+            shift
+            ;;
+            "-n" | "--nfp")
+            dev=$2
+	    shift
+	    ;;
+        esac
+	shift
+    done
+
+    nfp-rtsym -n$dev i34.me10.__mac_stats | awk -f make_rtsym_complete.awk > ./mac_stats_data.txt
+    if [ "$port" -eq "1" ];then
+        # There are 64 counters for each port, each counter is 64-bits counter
+        # So, the head 32 lines (0B~511B) is the counter data of port 0
+        # the line 32 to 63 (512B~1023B) is the counter data of port 1
+        # Currently, We only support NIC product which typically has 2 ports
+        sed -i '1,32d' ./mac_stats_data.txt
+    fi
+    parse_mem_for_64_bits_counters ./mac_stats_data.txt mac_stats
+}
+
+usage
