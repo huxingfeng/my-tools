@@ -94,7 +94,9 @@ function parse_mem_for_64_bits_counters()
             upper_val=$(echo "ibase=16;$upper_val" | bc)
         fi
         val=$((upper_val*4294967296 + lower_val))
-        echo $cntr: ${val:-0}
+        if [ "$val" -ne "0" ]; then
+            echo $cntr: ${val:-0}
+        fi
         cntr_idx=$((cntr_idx + 1))
     done
 }
