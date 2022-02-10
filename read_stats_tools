@@ -37,14 +37,17 @@ function parse_mac_stats()
 	shift
     done
 
-    nfp-rtsym -n$dev i34.me10.__mac_stats | awk -f make_rtsym_complete.awk > ./mac_stats_data.txt
-    if [ "$port" -eq "1" ];then
-        # There are 64 counters for each port, each counter is 64-bits counter
-        # So, the head 32 lines (0B~511B) is the counter data of port 0
-        # the line 32 to 63 (512B~1023B) is the counter data of port 1
-        # Currently, We only support NIC product which typically has 2 ports
-        sed -i '1,32d' ./mac_stats_data.txt
+    if [ "$port" -gt "1" ]; then
+	echo "Invalid port number: $port"
+	exit 1
     fi
+
+    # There are 64 counters for each port, each counter is 64-bits counter
+    # So, the head 32 lines (0B~511B) is the counter data of port 0
+    # the line 32 to 63 (512B~1023B) is the counter data of port 1
+    # Currently, We only support NIC product which typically has 2 ports
+    nfp-rtsym -n$dev -l512 -v -o ./mac_stats_data.txt i34.me10.__mac_stats:$((port*512))
+
     parse_mem_for_64_bits_counters ./mac_stats_data.txt mac_stats
 }
 

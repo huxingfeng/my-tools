@@ -77,26 +77,19 @@ function parse_mem_for_64_bits_counters()
 
     for cntr in `cat $input_file_cnt`
     do
-        if [ "$((cntr_idx % 2))" -eq "0" ]; then
-            curr_mem_line=(`sed -n $((cntr_idx / 2 + 1))p $input_file_mem`)
-            lower_val=${curr_mem_line[0]}
-            lower_val=$(echo ${lower_val:2} | tr '[a-f]' '[A-F]')
-            lower_val=$(echo "ibase=16;$lower_val" | bc)
-            upper_val=${curr_mem_line[1]}
-            upper_val=$(echo ${upper_val:2} | tr '[a-f]' '[A-F]')
-            upper_val=$(echo "ibase=16;$upper_val" | bc)
-        else
-            lower_val=${curr_mem_line[2]}
-            lower_val=$(echo ${lower_val:2} | tr '[a-f]' '[A-F]')
-            lower_val=$(echo "ibase=16;$lower_val" | bc)
-            upper_val=${curr_mem_line[3]}
-            upper_val=$(echo ${upper_val:2} | tr '[a-f]' '[A-F]')
-            upper_val=$(echo "ibase=16;$upper_val" | bc)
-        fi
-        val=$((upper_val*4294967296 + lower_val))
-        if [ "$val" -ne "0" ]; then
-            echo $cntr: ${val:-0}
-        fi
+        counter_name[$cntr_idx]=$cntr
         cntr_idx=$((cntr_idx + 1))
     done
+
+    line=0
+    while read stats_data
+    do
+        data=( $stats_data )
+        #echo ${data[0]} ${data[1]} ${data[2]} ${data[3]} ${data[4]}
+ 
+        echo ${counter_name[$((line*2  ))]}: $(printf "%d" ${data[2]})$(printf "%d\n" ${data[1]})
+        echo ${counter_name[$((line*2+1))]}: $(printf "%d" ${data[4]})$(printf "%d\n" ${data[3]})
+        
+        line=$((line + 1))
+    done < $input_file_mem
 }
