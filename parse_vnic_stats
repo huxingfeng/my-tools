@@ -1,0 +1,30 @@
+#! /bin/bash
+
+source ./parse_mem
+
+# parse_vnic_stats is used to parse _nic_stats_vnic
+# params:
+#    -n, --nfp   the device number of nfp
+#    -v, --vnic  the vnic number
+dev=0
+vnic=0
+
+while [ $# != 0 ]
+do
+    case $1 in
+        "-v" | "--vnic")
+        vnic=$2
+        shift
+        ;;
+        "-n" | "--nfp")
+        dev=$2
+        shift
+        ;;
+    esac
+    shift
+done
+
+# There are 64 counters for each vnic, each counter is 64-bits counter
+nfp-rtsym -n$dev -l512 -v -o ./.vnic_stats_data.txt _nic_stats_vnic:$((vnic*512))
+
+parse_mem_for_64_bits_counters ./.vnic_stats_data.txt ./vnic_stats
