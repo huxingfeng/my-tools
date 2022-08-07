@@ -85,10 +85,13 @@ function parse_mem_for_64_bits_counters()
     while read stats_data
     do
         data=( $stats_data )
-        #echo ${data[0]} ${data[1]} ${data[2]} ${data[3]} ${data[4]}
- 
-        echo ${counter_name[$((line*2  ))]}: $(printf "%d" ${data[2]})$(printf "%d\n" ${data[1]})
-        echo ${counter_name[$((line*2+1))]}: $(printf "%d" ${data[4]})$(printf "%d\n" ${data[3]})
+        if [ ${#data[*]} -ge 2 ]; then
+            echo ${counter_name[$((line*2  ))]}: $(printf "%d" ${data[2]})$(printf "%d\n" ${data[1]})
+        fi
+
+        if [ ${#data[*]} -ge 4 ]; then
+            echo ${counter_name[$((line*2+1))]}: $(printf "%d" ${data[4]})$(printf "%d\n" ${data[3]})
+        fi
         
         line=$((line + 1))
     done < $input_file_mem
