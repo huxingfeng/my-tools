@@ -1,0 +1,36 @@
+#! /bin/bash
+
+source ./parse_mem
+
+dev=${1:-0}   # The device number of nfp
+
+islands=(12 32 33 34)
+
+counter_name=(`cat ./feature_counter`)
+num=${#counter_name[*]}
+
+for i in $(seq 0 $[num-1])
+do
+    counter[$i]=0
+done
+
+# Accumulate stats from all islands
+for isl in ${islands[*]}
+do
+    nfp-rtsym -n$dev -v -o ./.feature_counter_data.txt i$isl._feature_counters
+    parse_mem_for_64_bits_counters ./.feature_counter_data.txt ./feature_counter > output.txt
+    stats=(`cat ./output.txt | awk '{print $2}'`)
+
+    for i in $(seq 0 $[num-1])
+    do
+        a0=${counter[$i]}
+        a1=${stats[$i]}
+        a1=${a1#*0}
+        counter[$i]=$[a0+a1]
+    done
+done
+
+for i in $(seq 0 $[num-1])
+do
+    echo "${counter_name[$i]}: ${counter[$i]}"
+done
